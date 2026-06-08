@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiniela Mundial 2026</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="container">
+    <h1>🏆 QUINIELA MUNDIAL 2026 ⚽</h1>
+
+    <!-- Pantalla de Registro/Login -->
+    <div id="authScreen" class="auth-screen">
+        <div class="tabs-auth">
+            <button class="tab-btn-auth active" onclick="mostrarLogin()">🔐 Iniciar Sesión</button>
+            <button class="tab-btn-auth" onclick="mostrarRegistro()">📝 Registrarse</button>
+        </div>
+
+        <!-- Login -->
+        <div id="loginPanel" class="auth-panel">
+            <h3>Iniciar Sesión</h3>
+            <input type="text" id="loginUser" placeholder="Usuario (apodo)">
+            <input type="password" id="loginPin" placeholder="PIN" maxlength="4">
+            <button onclick="hacerLogin()">Entrar</button>
+            <button onclick="borrarDatosGuardados()" style="background:#888; margin-top:5px;">🗑️ Borrar datos guardados</button>
+            <p id="loginMsg" class="msg-error"></p>
+        </div>
+
+        <!-- Registro -->
+        <div id="registerPanel" class="auth-panel hidden">
+            <h3>Registrarse</h3>
+            <input type="text" id="regNombre" placeholder="Nombre completo">
+            <input type="text" id="regUser" placeholder="Usuario (apodo) - ÚNICO">
+            <div class="pin-row">
+                <input type="text" id="regPin" placeholder="PIN" readonly>
+                <button onclick="generarPin()">🎲 Generar PIN</button>
+            </div>
+            <button onclick="hacerRegistro()">Registrarme</button>
+            <p id="registerMsg" class="msg-error"></p>
+        </div>
+    </div>
+
+    <!-- Pantalla Principal de la Quiniela -->
+    <div id="mainScreen" class="main-screen hidden">
+        <div class="header-main">
+            <span id="userNameDisplay"></span>
+            <button onclick="cerrarSesion()" class="btn-salir">🚪 Salir</button>
+        </div>
+
+        <div class="tabs-main">
+            <button class="tab-btn-main active" onclick="cambiarTab('partidos')">📋 Partidos</button>
+            <button class="tab-btn-main" onclick="cambiarTab('predicciones')">📝 Mis Predicciones</button>
+            <button class="tab-btn-main" onclick="cambiarTab('clasificacion')">🏅 Clasificación</button>
+        </div>
+
+        <div id="tabPartidos" class="tab-panel">
+            <h3>⚽ Haz tus predicciones</h3>
+            <div id="partidosList"></div>
+        </div>
+
+        <div id="tabPredicciones" class="tab-panel hidden">
+            <h3>📌 Tus pronósticos</h3>
+            <div id="misPrediccionesList"></div>
+        </div>
+
+        <div id="tabClasificacion" class="tab-panel hidden">
+            <h3>📊 Tabla de posiciones</h3>
+            <div id="clasificacionList"></div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
