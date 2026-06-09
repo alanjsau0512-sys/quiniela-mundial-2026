@@ -4,8 +4,7 @@
 const PUNTOS_POR_ACIERTO = 3;
 
 // ==================== CONFIGURACIÓN DE GOOGLE SHEETS ====================
-const SHEET_ID = "2PACX-1vQITZUGnVdo5KhU14vBgN1k8nV8YSapJC8Gpf4EFZF1JaLdin5WLA6JprilOcaSB8mVVxXF4w_APF1D";
-
+const SHEET_ID = "1IgvP7N_odNM4NkNRiWarKPWShJSeFJneFz0i6a0-_h0";
 async function cargarResultadosDesdeSheet() {
     try {
         const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=resultados`;
