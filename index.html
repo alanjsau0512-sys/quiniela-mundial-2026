@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>Quiniela Mundial 2026</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -22,10 +22,19 @@
         <div id="loginPanel" class="auth-panel">
             <h3>Iniciar Sesión</h3>
             <input type="text" id="loginUser" placeholder="Usuario (apodo)">
-            <input type="password" id="loginPin" placeholder="PIN" maxlength="4">
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                <input type="password" id="loginPin" placeholder="PIN" maxlength="4" style="flex: 1; margin-bottom: 0;">
+                <button type="button" id="toggleLoginPin" style="background: #f0f0f0; border: 2px solid #ddd; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 1.2rem;">👁️</button>
+            </div>
             <button onclick="hacerLogin()">Entrar</button>
-            <button onclick="borrarDatosGuardados()" style="background:#888; margin-top:5px;">🗑️ Borrar datos guardados</button>
             <p id="loginMsg" class="msg-error"></p>
+            <div class="aviso-box" style="background:#fff3cd; border-left: 4px solid #ffc107; padding: 12px; margin-top: 15px; border-radius: 8px; font-size: 0.85rem; color: #856404;">
+                <strong>📌 Avisos importantes:</strong><br>
+                • Al registrarte, GUARDA BIEN tu PIN en caso de querer iniciar sesión en otro dispositivo.<br>
+                • Tu usuario es único y no se puede repetir.<br>
+                • Puedes cambiar tus predicciones hasta que el partido comience.<br>
+                • Los resultados se actualizan después de cada partido real.
+            </div>
         </div>
 
         <!-- Registro -->
@@ -34,8 +43,8 @@
             <input type="text" id="regNombre" placeholder="Nombre completo">
             <input type="text" id="regUser" placeholder="Usuario (apodo) - ÚNICO">
             <div class="pin-row">
-                <input type="text" id="regPin" placeholder="PIN" readonly>
-                <button onclick="generarPin()">🎲 Generar PIN</button>
+                <input type="text" id="regPin" placeholder="PIN de 4 dígitos" maxlength="4" inputmode="numeric">
+                <small style="font-size: 0.7rem; color: #666;">Elige un PIN de 4 dígitos que recuerdes fácilmente</small>
             </div>
             <button onclick="hacerRegistro()">Registrarme</button>
             <p id="registerMsg" class="msg-error"></p>
@@ -51,20 +60,49 @@
 
         <div class="tabs-main">
             <button class="tab-btn-main active" onclick="cambiarTab('partidos')">📋 Partidos</button>
+            <button class="tab-btn-main" onclick="cambiarTab('horarios')">📅 Horarios</button>
             <button class="tab-btn-main" onclick="cambiarTab('predicciones')">📝 Mis Predicciones</button>
             <button class="tab-btn-main" onclick="cambiarTab('clasificacion')">🏅 Clasificación</button>
         </div>
 
+        <!-- Pestaña PARTIDOS -->
         <div id="tabPartidos" class="tab-panel">
             <h3>⚽ Haz tus predicciones</h3>
+            
+            <!-- Indicador de jornada activa -->
+            <div id="jornadaInfo" style="background: #e8f5e9; padding: 10px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
+                📅 Jornada activa: <strong id="jornadaTexto">1</strong> - Solo puedes apostar en los partidos de esta jornada.
+            </div>
+            
+            <div class="etapa-tabs" id="etapaTabs">
+                <button class="etapa-btn active" data-etapa="grupos">📋 Fase de Grupos</button>
+                <button class="etapa-btn" data-etapa="dieciseisavos">🏆 Dieciseisavos</button>
+                <button class="etapa-btn" data-etapa="octavos">⚽ Octavos</button>
+                <button class="etapa-btn" data-etapa="cuartos">🔥 Cuartos</button>
+                <button class="etapa-btn" data-etapa="semifinales">🥇 Semifinales</button>
+                <button class="etapa-btn" data-etapa="tercerpuesto">🥉 3er Puesto</button>
+                <button class="etapa-btn" data-etapa="final">🏆 Final</button>
+            </div>
             <div id="partidosList"></div>
         </div>
 
+        <div id="faseInfo" style="background: #e3f2fd; padding: 10px; border-radius: 10px; margin-bottom: 15px; text-align: center;">
+    🏆 Fase activa: <strong id="faseTexto">Fase de Grupos</strong> - Solo puedes apostar en los partidos de esta fase.
+</div>
+
+        <!-- Pestaña HORARIOS -->
+        <div id="tabHorarios" class="tab-panel hidden">
+            <h3>📅 Calendario de partidos (Hora CDMX)</h3>
+            <div id="horariosList"></div>
+        </div>
+
+        <!-- Pestaña MIS PREDICCIONES -->
         <div id="tabPredicciones" class="tab-panel hidden">
             <h3>📌 Tus pronósticos</h3>
             <div id="misPrediccionesList"></div>
         </div>
 
+        <!-- Pestaña CLASIFICACIÓN -->
         <div id="tabClasificacion" class="tab-panel hidden">
             <h3>📊 Tabla de posiciones</h3>
             <div id="clasificacionList"></div>
