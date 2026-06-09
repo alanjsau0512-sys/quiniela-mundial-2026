@@ -271,3 +271,316 @@ th {
 tr:hover {
     background: #f1f8e9;
 }
+
+/* Pestañas de etapas (Fase de Grupos, Dieciseisavos, etc.) */
+.etapa-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+
+.etapa-btn {
+    background: #e0e0e0;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 25px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.etapa-btn:hover {
+    background: #c8e6c9;
+    transform: scale(1.02);
+}
+
+.etapa-btn.active {
+    background: #2e7d32;
+    color: white;
+}
+
+/* ==================== TABLA DE CLASIFICACIÓN MEJORADA ==================== */
+.clasificacion-container {
+    background: linear-gradient(135deg, #1a472a 0%, #0e2a1a 100%);
+    border-radius: 20px;
+    padding: 3px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.clasificacion-tabla {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+.clasificacion-tabla thead tr {
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+}
+
+.clasificacion-tabla th {
+    color: white;
+    font-weight: bold;
+    padding: 18px 12px;
+    font-size: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.clasificacion-tabla th:first-child {
+    border-top-left-radius: 18px;
+}
+
+.clasificacion-tabla th:last-child {
+    border-top-right-radius: 18px;
+}
+
+.clasificacion-tabla td {
+    padding: 14px 12px;
+    text-align: center;
+    border-bottom: 1px solid #e8f5e9;
+}
+
+.clasificacion-tabla tbody tr:nth-child(even) {
+    background-color: #f1f8e9;
+}
+
+.clasificacion-tabla tbody tr:nth-child(odd) {
+    background-color: #ffffff;
+}
+
+.clasificacion-tabla tbody tr:hover {
+    background-color: #c8e6c9;
+}
+
+.nombre-col {
+    text-align: left;
+    font-weight: 500;
+}
+
+.puntos-col {
+    font-weight: bold;
+    font-size: 1.2rem;
+    color: #2e7d32;
+}
+
+.medalla-oro {
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    color: #1a1a1a;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.medalla-plata {
+    background: linear-gradient(135deg, #c0c0c0, #a0a0a0);
+    color: #1a1a1a;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.medalla-bronce {
+    background: linear-gradient(135deg, #cd7f32, #b8692a);
+    color: white;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.lider-badge {
+    background: linear-gradient(135deg, #ffd700, #ffb300);
+    color: #1a1a1a;
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-left: 8px;
+    display: inline-block;
+}
+
+.no-data {
+    text-align: center;
+    padding: 40px 20px;
+    color: #666;
+    background: white;
+    border-radius: 20px;
+}
+
+/* ==================== ESTILOS PARA LA PESTAÑA HORARIOS ==================== */
+.horarios-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.horario-card {
+    background: #f9f9f9;
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.horario-header {
+    background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+    color: white;
+    padding: 12px 20px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.horario-fecha {
+    background: rgba(255,255,255,0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+}
+
+.horario-contenido {
+    padding: 15px;
+}
+
+.horario-partido {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.horario-partido:last-child {
+    border-bottom: none;
+}
+
+.horario-equipos {
+    font-weight: bold;
+    font-size: 1rem;
+    flex: 2;
+    min-width: 200px;
+}
+
+.horario-hora {
+    background: #e8f5e9;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: #2e7d32;
+    font-weight: bold;
+    min-width: 80px;
+    text-align: center;
+}
+
+.horario-estadio {
+    color: #666;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 150px;
+}
+
+.horario-estadio:before {
+    content: "🏟️";
+    font-size: 0.9rem;
+}
+
+@media (max-width: 700px) {
+    .horario-partido {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .horario-equipos {
+        width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .clasificacion-tabla th,
+    .clasificacion-tabla td {
+        padding: 10px 6px;
+        font-size: 0.8rem;
+    }
+    .medalla-oro,
+    .medalla-plata,
+    .medalla-bronce {
+        width: 25px;
+        height: 25px;
+        font-size: 0.8rem;
+    }
+    /* Mensajes de estado de partidos */
+.puntos.acierto {
+    background: #c8e6c9;
+    color: #2e7d32;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 8px;
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.puntos.error {
+    background: #ffcdd2;
+    color: #c62828;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 8px;
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.puntos.bloqueado {
+    background: #fff3e0;
+    color: #e65100;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 8px;
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.puntos.pendiente {
+    background: #e8eaf6;
+    color: #283593;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 8px;
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.badge-pendiente {
+    background: #ff9800;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 15px;
+    margin-left: 8px;
+    display: inline-block;
+}
+
+}
