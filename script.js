@@ -391,13 +391,16 @@ async function hacerRegistro() {
         msgDiv.style.color = "red";
         return;
     }
-    if (usuarios.find(u => u.usuario === usuario)) {
-        msgDiv.innerHTML = "❌ Usuario ya registrado. Elige otro";
+    if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
+        msgDiv.innerHTML = "❌ Elige un PIN de 4 dígitos (solo números)";
         msgDiv.style.color = "red";
         return;
     }
-    if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) {
-        msgDiv.innerHTML = "❌ Elige un PIN de 4 dígitos (solo números)";
+    
+    // Verificar si el usuario ya existe en Firebase
+    const snapshot = await database.ref(`usuarios/${usuario}`).once('value');
+    if (snapshot.exists()) {
+        msgDiv.innerHTML = "❌ Usuario ya registrado. Elige otro";
         msgDiv.style.color = "red";
         return;
     }
@@ -410,9 +413,12 @@ async function hacerRegistro() {
         puntosTotal: 0
     };
     
+    // Guardar en Firebase
+    await database.ref(`usuarios/${usuario}`).set(nuevoUsuario);
+    
+    // También guardar en el array local para compatibilidad
     usuarios.push(nuevoUsuario);
     guardarUsuarios();
-    await guardarUsuarioFirebase(nuevoUsuario);
     
     localStorage.setItem("recordar_usuario", usuario);
     localStorage.setItem("recordar_pin", pin);
@@ -422,11 +428,10 @@ async function hacerRegistro() {
     
     setTimeout(() => {
         usuarioActual = nuevoUsuario;
-        guardarSesion(nuevoUsuario);
+        localStorage.setItem("quiniela_sesion", usuario);
         mostrarPantallaPrincipal();
     }, 1000);
 }
-
 // ==================== LOGIN ====================
 async function hacerLogin() {
     const usuario = document.getElementById("loginUser").value.trim().toLowerCase();
@@ -444,6 +449,7 @@ async function hacerLogin() {
         return;
     }
     
+    // Buscar en Firebase
     const snapshot = await database.ref(`usuarios/${usuario}`).once('value');
     const usuarioData = snapshot.val();
     
@@ -464,14 +470,14 @@ async function hacerLogin() {
     usuarioActual = usuarioData;
     localStorage.setItem("quiniela_sesion", usuario);
     
-    const predicciones = await cargarPrediccionesFirebase(usuario);
-    usuarioActual.predicciones = predicciones;
+    // Cargar predicciones del usuario
+    const prediccionesSnapshot = await database.ref(`predicciones/${usuario}`).once('value');
+    usuarioActual.predicciones = prediccionesSnapshot.val() || {};
     
     setTimeout(() => {
         mostrarPantallaPrincipal();
     }, 500);
 }
-
 // ==================== CERRAR SESIÓN ====================
 function cerrarSesion() {
     usuarioActual = null;
@@ -502,7 +508,7 @@ function mostrarPantallaLogin() {
     document.getElementById("loginMsg").innerHTML = "";
 }
 
-async function mostrarPantallaPrincipal() {
+function mostrarPantallaPrincipal() {
     document.getElementById("authScreen").classList.add("hidden");
     document.getElementById("mainScreen").classList.remove("hidden");
     
@@ -512,7 +518,7 @@ async function mostrarPantallaPrincipal() {
     renderPartidos();
     renderHorarios();
     renderMisPredicciones();
-    await renderClasificacion();
+    renderClasificacion();  // Sin await, es una función async pero no necesitamos esperar
     
     const etapaBtns = document.querySelectorAll(".etapa-btn");
     etapaBtns.forEach(btn => {
@@ -521,7 +527,6 @@ async function mostrarPantallaPrincipal() {
         });
     });
 }
-
 // ==================== MOSTRAR TABS DE AUTH ====================
 function mostrarLogin() {
     const btns = document.querySelectorAll(".tabs-auth .tab-btn-auth");
@@ -1087,7 +1092,6 @@ function renderMisPredicciones() {
     container.innerHTML = html;
 }
 
-// ==================== RENDER CLASIFICACIÓN ====================
 async function renderClasificacion() {
     const container = document.getElementById("clasificacionList");
     if (!container) return;
