@@ -1,6 +1,5 @@
 // ==================== QUINIELA MUNDIAL 2026 - CON FIREBASE ====================
-// Control de jornadas (fase de grupos) y fases (eliminatorias)
-// Los resultados se sincronizan para TODOS los usuarios
+// Control manual de bloqueos (admin decide qué bloquear)
 
 const PUNTOS_POR_ACIERTO = 1;
 
@@ -397,7 +396,6 @@ async function hacerRegistro() {
         return;
     }
     
-    // Verificar si el usuario ya existe en Firebase
     const snapshot = await database.ref(`usuarios/${usuario}`).once('value');
     if (snapshot.exists()) {
         msgDiv.innerHTML = "❌ Usuario ya registrado. Elige otro";
@@ -413,10 +411,7 @@ async function hacerRegistro() {
         puntosTotal: 0
     };
     
-    // Guardar en Firebase
     await database.ref(`usuarios/${usuario}`).set(nuevoUsuario);
-    
-    // También guardar en el array local para compatibilidad
     usuarios.push(nuevoUsuario);
     guardarUsuarios();
     
@@ -432,6 +427,7 @@ async function hacerRegistro() {
         mostrarPantallaPrincipal();
     }, 1000);
 }
+
 // ==================== LOGIN ====================
 async function hacerLogin() {
     const usuario = document.getElementById("loginUser").value.trim().toLowerCase();
@@ -449,7 +445,6 @@ async function hacerLogin() {
         return;
     }
     
-    // Buscar en Firebase
     const snapshot = await database.ref(`usuarios/${usuario}`).once('value');
     const usuarioData = snapshot.val();
     
@@ -470,7 +465,6 @@ async function hacerLogin() {
     usuarioActual = usuarioData;
     localStorage.setItem("quiniela_sesion", usuario);
     
-    // Cargar predicciones del usuario
     const prediccionesSnapshot = await database.ref(`predicciones/${usuario}`).once('value');
     usuarioActual.predicciones = prediccionesSnapshot.val() || {};
     
@@ -478,6 +472,7 @@ async function hacerLogin() {
         mostrarPantallaPrincipal();
     }, 500);
 }
+
 // ==================== CERRAR SESIÓN ====================
 function cerrarSesion() {
     usuarioActual = null;
@@ -518,7 +513,7 @@ function mostrarPantallaPrincipal() {
     renderPartidos();
     renderHorarios();
     renderMisPredicciones();
-    renderClasificacion();  // Sin await, es una función async pero no necesitamos esperar
+    renderClasificacion();
     
     const etapaBtns = document.querySelectorAll(".etapa-btn");
     etapaBtns.forEach(btn => {
@@ -527,6 +522,7 @@ function mostrarPantallaPrincipal() {
         });
     });
 }
+
 // ==================== MOSTRAR TABS DE AUTH ====================
 function mostrarLogin() {
     const btns = document.querySelectorAll(".tabs-auth .tab-btn-auth");
@@ -580,22 +576,7 @@ async function guardarPrediccion(partidoId, resultado) {
     
     const partido = partidos.find(p => p.id === partidoId);
     
-    // VALIDACIÓN POR JORNADA (FASE DE GRUPOS)
-    if (partido.id >= 1 && partido.id <= 72) {
-        let jornadaDelPartido = 1;
-        if (partido.id >= 25 && partido.id <= 48) {
-            jornadaDelPartido = 2;
-        } else if (partido.id >= 49 && partido.id <= 72) {
-            jornadaDelPartido = 3;
-        }
-        
-        if (jornadaDelPartido > jornadaActiva) {
-            alert(`⏳ Esta jornada aún no está disponible. Solo puedes apostar en la Jornada ${jornadaActiva} por ahora.`);
-            return;
-        }
-    }
-    
-    // VALIDACIÓN POR FASE DE ELIMINATORIAS
+    // VALIDACIÓN POR FASE DE ELIMINATORIAS (solo para eliminatorias)
     if (partido.id >= 73) {
         let faseDelPartido = "grupos";
         if (partido.id >= 73 && partido.id <= 88) faseDelPartido = "dieciseisavos";
@@ -682,22 +663,122 @@ function adminVerUsuarios() {
 
 // ==================== CONTROL DE JORNADAS (ADMIN) ====================
 async function cambiarJornada(jornada) {
+    if (jornada < 1 || jornada > 3) {
+        console.log("❌ Jornada inválida. Usa 1, 2 o 3");
+        return;
+    }
+    
     if (!adminAutenticado) {
         const email = prompt("🔐 Correo de administrador:");
         const password = prompt("🔐 Contraseña:");
         const ok = await autenticarAdmin(email, password);
         if (!ok) {
-            alert("❌ Autenticación fallida. No puedes cambiar la jornada.");
+            alert("❌ Autenticación fallida.");
             return;
         }
     }
+    
     await database.ref('jornadaActiva').set(jornada);
-    console.log(`📅 Jornada ${jornada} activada en Firebase`);
-    await cargarJornadaFirebase();
+    jornadaActiva = jornada;
+    console.log(`📅 Jornada ${jornada} activada.`);
+    renderPartidos();
+}
+
+// ==================== BLOQUEAR/DESBLOQUEAR JORNADA ====================
+async function bloquearJornada(jornada) {
+    if (jornada < 1 || jornada > 3) {
+        console.log("❌ Jornada inválida. Usa 1, 2 o 3");
+        return;
+    }
+    
+    if (!adminAutenticado) {
+        const email = prompt("🔐 Correo de administrador:");
+        const password = prompt("🔐 Contraseña:");
+        const ok = await autenticarAdmin(email, password);
+        if (!ok) {
+            alert("❌ Autenticación fallida.");
+            return;
+        }
+    }
+    
+    let inicio = 1, fin = 24;
+    if (jornada === 1) { inicio = 1; fin = 24; }
+    else if (jornada === 2) { inicio = 25; fin = 48; }
+    else if (jornada === 3) { inicio = 49; fin = 72; }
+    
+    for (let i = inicio; i <= fin; i++) {
+        await database.ref(`resultados/${i}`).set("bloqueado");
+    }
+    
+    console.log(`🔒 Jornada ${jornada} bloqueada.`);
+    await cargarResultadosFirebase();
     if (usuarioActual) renderPartidos();
 }
 
-// ==================== CONTROL DE FASES DE ELIMINATORIAS (ADMIN) ====================
+async function desbloquearJornada(jornada) {
+    if (jornada < 1 || jornada > 3) {
+        console.log("❌ Jornada inválida. Usa 1, 2 o 3");
+        return;
+    }
+    
+    if (!adminAutenticado) {
+        const email = prompt("🔐 Correo de administrador:");
+        const password = prompt("🔐 Contraseña:");
+        const ok = await autenticarAdmin(email, password);
+        if (!ok) {
+            alert("❌ Autenticación fallida.");
+            return;
+        }
+    }
+    
+    let inicio = 1, fin = 24;
+    if (jornada === 1) { inicio = 1; fin = 24; }
+    else if (jornada === 2) { inicio = 25; fin = 48; }
+    else if (jornada === 3) { inicio = 49; fin = 72; }
+    
+    for (let i = inicio; i <= fin; i++) {
+        await database.ref(`resultados/${i}`).remove();
+    }
+    
+    console.log(`🔓 Jornada ${jornada} desbloqueada.`);
+    await cargarResultadosFirebase();
+    if (usuarioActual) renderPartidos();
+}
+
+// ==================== BLOQUEAR/DESBLOQUEAR PARTIDO INDIVIDUAL ====================
+async function bloquearPartido(id) {
+    if (!adminAutenticado) {
+        const email = prompt("🔐 Correo de administrador:");
+        const password = prompt("🔐 Contraseña:");
+        const ok = await autenticarAdmin(email, password);
+        if (!ok) {
+            alert("❌ Autenticación fallida.");
+            return;
+        }
+    }
+    await database.ref(`resultados/${id}`).set("bloqueado");
+    console.log(`🔒 Partido ${id} bloqueado.`);
+    await cargarResultadosFirebase();
+    if (usuarioActual) renderPartidos();
+}
+
+async function desbloquearPartido(id) {
+    if (!adminAutenticado) {
+        const email = prompt("🔐 Correo de administrador:");
+        const password = prompt("🔐 Contraseña:");
+        const ok = await autenticarAdmin(email, password);
+        if (!ok) {
+            alert("❌ Autenticación fallida.");
+            return;
+        }
+    }
+    await database.ref(`resultados/${id}`).remove();
+    console.log(`🔓 Partido ${id} desbloqueado.`);
+    await cargarResultadosFirebase();
+    if (usuarioActual) renderPartidos();
+}
+
+// ==================== CONTROL DE FASES ====================
 async function cambiarFase(fase) {
     const fasesValidas = ["grupos", "dieciseisavos", "octavos", "cuartos", "semifinales", "tercerpuesto", "final"];
     
@@ -711,17 +792,17 @@ async function cambiarFase(fase) {
         const password = prompt("🔐 Contraseña:");
         const ok = await autenticarAdmin(email, password);
         if (!ok) {
-            alert("❌ Autenticación fallida. No puedes cambiar la fase.");
+            alert("❌ Autenticación fallida.");
             return;
         }
     }
     await database.ref('faseActiva').set(fase);
-    console.log(`🏆 Fase ${fase} activada en Firebase`);
-    await cargarFaseFirebase();
-    if (usuarioActual) renderPartidos();
+    faseActiva = fase;
+    console.log(`🏆 Fase ${fase} activada.`);
+    renderPartidos();
 }
 
-// ==================== CONTROL DE HORARIOS (ADMIN) ====================
+// ==================== CONTROL DE HORARIOS ====================
 function mostrarFaseEnHorarios(fase) {
     const fasesValidas = ["grupos", "dieciseisavos", "octavos", "cuartos", "semifinales", "tercerpuesto", "final"];
     
@@ -762,31 +843,6 @@ function actualizarEquipoEnHorarios(idPartido, nuevoEquipoA, nuevoEquipoB) {
     renderHorarios();
     renderPartidos();
     console.log(`✅ Partido ${idPartido} actualizado: ${nuevoEquipoA} vs ${nuevoEquipoB}`);
-}
-
-// ==================== BLOQUEAR/DESBLOQUEAR PARTIDO INDIVIDUAL ====================
-function bloquearPartido(id) {
-    const partido = partidos.find(p => p.id === id);
-    if (!partido) {
-        console.log("❌ Partido no existe");
-        return;
-    }
-    partido.resultadoReal = "bloqueado";
-    guardarPartidos();
-    renderPartidos();
-    console.log(`🔒 Partido ${id}: ${partido.equipoA} vs ${partido.equipoB} ha sido bloqueado.`);
-}
-
-function desbloquearPartido(id) {
-    const partido = partidos.find(p => p.id === id);
-    if (!partido) {
-        console.log("❌ Partido no existe");
-        return;
-    }
-    partido.resultadoReal = null;
-    guardarPartidos();
-    renderPartidos();
-    console.log(`🔓 Partido ${id}: ${partido.equipoA} vs ${partido.equipoB} ha sido desbloqueado.`);
 }
 
 // ==================== RENDER PARTIDOS ====================
@@ -861,17 +917,6 @@ function renderPartidos() {
             resultadoTexto = "⏳ Partido pendiente";
         }
         
-        let bloqueadoPorJornada = false;
-        if (partido.id >= 1 && partido.id <= 72) {
-            let jornadaDelPartido = 1;
-            if (partido.id >= 25 && partido.id <= 48) {
-                jornadaDelPartido = 2;
-            } else if (partido.id >= 49 && partido.id <= 72) {
-                jornadaDelPartido = 3;
-            }
-            bloqueadoPorJornada = jornadaDelPartido > jornadaActiva;
-        }
-        
         let bloqueadoPorFase = false;
         if (partido.id >= 73) {
             let faseDelPartido = "grupos";
@@ -889,7 +934,7 @@ function renderPartidos() {
             bloqueadoPorFase = fasePartidoIndex > faseActualIndex;
         }
         
-        const deshabilitado = (partido.resultadoReal !== null) || bloqueadoPorJornada || bloqueadoPorFase;
+        const deshabilitado = (partido.resultadoReal !== null) || bloqueadoPorFase;
         
         html += `
             <div class="match-card">
@@ -1092,6 +1137,7 @@ function renderMisPredicciones() {
     container.innerHTML = html;
 }
 
+// ==================== RENDER CLASIFICACIÓN ====================
 async function renderClasificacion() {
     const container = document.getElementById("clasificacionList");
     if (!container) return;
@@ -1204,7 +1250,7 @@ function cambiarEtapa(etapa) {
     renderPartidos();
 }
 
-// Exponer funciones globalmente
+// ==================== EXPONER FUNCIONES GLOBALES ====================
 window.mostrarFaseEnHorarios = mostrarFaseEnHorarios;
 window.ocultarFaseEnHorarios = ocultarFaseEnHorarios;
 window.actualizarEquipoEnHorarios = actualizarEquipoEnHorarios;
@@ -1213,6 +1259,8 @@ window.adminReiniciarResultados = adminReiniciarResultados;
 window.adminVerUsuarios = adminVerUsuarios;
 window.cambiarJornada = cambiarJornada;
 window.cambiarFase = cambiarFase;
+window.bloquearJornada = bloquearJornada;
+window.desbloquearJornada = desbloquearJornada;
 window.bloquearPartido = bloquearPartido;
 window.desbloquearPartido = desbloquearPartido;
 
@@ -1253,14 +1301,16 @@ async function init() {
     }
     
     console.log("🏆 Quiniela Mundial 2026 - Con Firebase");
-    console.log("💡 Comandos admin (solo para ti):");
-    console.log("   adminCargarResultado(id, '1/2/X') - Cargar resultado (todos lo ven)");
+    console.log("💡 Comandos admin:");
+    console.log("   adminCargarResultado(id, '1/2/X') - Cargar resultado");
     console.log("   adminReiniciarResultados() - Reiniciar resultados");
     console.log("   adminVerUsuarios() - Ver usuarios");
-    console.log("   cambiarJornada(1/2/3) - Cambiar jornada activa");
-    console.log("   cambiarFase('fase') - Cambiar fase activa");
+    console.log("   cambiarJornada(1/2/3) - Activar jornada (sin bloquear)");
+    console.log("   bloquearJornada(1/2/3) - Bloquear jornada completa");
+    console.log("   desbloquearJornada(1/2/3) - Desbloquear jornada completa");
     console.log("   bloquearPartido(id) - Bloquear partido individual");
     console.log("   desbloquearPartido(id) - Desbloquear partido individual");
+    console.log("   cambiarFase('fase') - Cambiar fase activa");
     console.log("   mostrarFaseEnHorarios('fase') - Mostrar fase en horarios");
 }
 
