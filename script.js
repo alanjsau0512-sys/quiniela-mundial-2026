@@ -1,7 +1,84 @@
-// ==================== QUINIELA MUNDIAL 2026 - VERSIÓN COMPLETA ====================
+// ==================== QUINIELA MUNDIAL 2026 - CON FIREBASE ====================
 // Control de jornadas (fase de grupos) y fases (eliminatorias)
+// Los resultados se sincronizan para TODOS los usuarios
 
 const PUNTOS_POR_ACIERTO = 1;
+
+// ==================== CONFIGURACIÓN DE FIREBASE ====================
+const firebaseConfig = {
+    apiKey: "AIzaSyBQUm--jGlatkKEzj1SJqYh09daKjEYe0o",
+    authDomain: "quiniela-logisfashion.firebaseapp.com",
+    databaseURL: "https://quiniela-logisfashion-default-rtdb.firebaseio.com",
+    projectId: "quiniela-logisfashion",
+    storageBucket: "quiniela-logisfashion.firebasestorage.app",
+    messagingSenderId: "270163524897",
+    appId: "1:270163524897:web:d821a27a8395986a665260",
+    measurementId: "G-7EN2XCK0Q0"
+};
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const auth = firebase.auth();
+let adminAutenticado = false;
+
+// ==================== FUNCIONES DE FIREBASE ====================
+async function autenticarAdmin(email, password) {
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+        adminAutenticado = true;
+        console.log("✅ Autenticado como administrador");
+        return true;
+    } catch (error) {
+        console.error("❌ Error de autenticación:", error);
+        adminAutenticado = false;
+        return false;
+    }
+}
+
+async function cargarResultadosFirebase() {
+    const snapshot = await database.ref('resultados').once('value');
+    const resultados = snapshot.val() || {};
+    for (let id in resultados) {
+        const partido = partidos.find(p => p.id === parseInt(id));
+        if (partido) partido.resultadoReal = resultados[id];
+    }
+    console.log("✅ Resultados cargados desde Firebase");
+    if (usuarioActual) renderPartidos();
+}
+
+async function cargarJornadaFirebase() {
+    const snapshot = await database.ref('jornadaActiva').once('value');
+    const valor = snapshot.val();
+    if (valor) {
+        jornadaActiva = valor;
+        console.log(`📅 Jornada activa: ${jornadaActiva}`);
+        if (usuarioActual) renderPartidos();
+    }
+}
+
+async function cargarFaseFirebase() {
+    const snapshot = await database.ref('faseActiva').once('value');
+    const valor = snapshot.val();
+    if (valor) {
+        faseActiva = valor;
+        console.log(`🏆 Fase activa: ${faseActiva}`);
+        if (usuarioActual) renderPartidos();
+    }
+}
+
+async function guardarUsuarioFirebase(usuario) {
+    await database.ref(`usuarios/${usuario.usuario}`).set(usuario);
+}
+
+async function guardarPrediccionFirebase(usuario, partidoId, prediccion) {
+    await database.ref(`predicciones/${usuario}/${partidoId}`).set(prediccion);
+}
+
+async function cargarPrediccionesFirebase(usuario) {
+    const snapshot = await database.ref(`predicciones/${usuario}`).once('value');
+    return snapshot.val() || {};
+}
 
 // ==================== PARTIDOS OFICIALES MUNDIAL 2026 ====================
 let partidos = [];
@@ -109,65 +186,45 @@ const fechasPartidos = {
 
 // ==================== DATOS PARA ELIMINATORIAS (HORARIOS) ====================
 const horariosEliminatorias = {
-    // Dieciseisavos (IDs 73-88)
     73: "13:00", 74: "13:00", 75: "13:00", 76: "14:00",
     77: "13:00", 78: "13:00", 79: "19:00", 80: "10:00",
     81: "13:00", 82: "19:00", 83: "11:00", 84: "13:00",
     85: "19:00", 86: "11:00", 87: "14:00", 88: "19:00",
-    // Octavos (IDs 89-96)
     89: "14:00", 90: "14:00", 91: "11:00", 92: "16:00",
     93: "11:00", 94: "14:00", 95: "14:00", 96: "19:00",
-    // Cuartos (IDs 97-100)
     97: "13:00", 98: "16:00", 99: "13:00", 100: "16:00",
-    // Semifinales (IDs 101-102)
     101: "16:00", 102: "16:00",
-    // Tercer puesto (ID 103)
     103: "14:00",
-    // Final (ID 104)
     104: "14:00"
 };
 
 const estadiosEliminatorias = {
-    // Dieciseisavos
     73: "Estadio Los Ángeles", 74: "Estadio Boston", 75: "Estadio Monterrey", 76: "Estadio Houston",
     77: "Estadio Nueva York Nueva Jersey", 78: "Estadio Dallas", 79: "Estadio Ciudad de México", 80: "Estadio Atlanta",
     81: "Estadio Bahía de San Francisco", 82: "Estadio Seattle", 83: "Estadio Toronto", 84: "Estadio Los Ángeles",
     85: "Estadio BC Place Vancouver", 86: "Estadio Miami", 87: "Estadio Kansas City", 88: "Estadio Dallas",
-    // Octavos
     89: "Estadio Filadelfia", 90: "Estadio Houston", 91: "Estadio Nueva York Nueva Jersey", 92: "Estadio Ciudad de México",
     93: "Estadio Dallas", 94: "Estadio Seattle", 95: "Estadio Atlanta", 96: "Estadio BC Place Vancouver",
-    // Cuartos
     97: "Estadio Boston", 98: "Estadio Los Ángeles", 99: "Estadio Miami", 100: "Estadio Kansas City",
-    // Semifinales
     101: "Estadio Dallas", 102: "Estadio Atlanta",
-    // Tercer puesto
     103: "Estadio Miami",
-    // Final
     104: "Estadio Nueva York Nueva Jersey"
 };
 
 const fechasEliminatorias = {
-    // Dieciseisavos (IDs 73-88)
     73: "28/06/2026", 74: "29/06/2026", 75: "29/06/2026", 76: "29/06/2026",
     77: "30/06/2026", 78: "30/06/2026", 79: "30/06/2026", 80: "01/07/2026",
     81: "01/07/2026", 82: "01/07/2026", 83: "02/07/2026", 84: "02/07/2026",
     85: "02/07/2026", 86: "03/07/2026", 87: "03/07/2026", 88: "03/07/2026",
-    // Octavos (IDs 89-96)
     89: "04/07/2026", 90: "04/07/2026", 91: "05/07/2026", 92: "05/07/2026",
     93: "06/07/2026", 94: "06/07/2026", 95: "07/07/2026", 96: "07/07/2026",
-    // Cuartos (IDs 97-100)
     97: "09/07/2026", 98: "10/07/2026", 99: "11/07/2026", 100: "11/07/2026",
-    // Semifinales (IDs 101-102)
     101: "14/07/2026", 102: "15/07/2026",
-    // Tercer puesto (ID 103)
     103: "18/07/2026",
-    // Final (ID 104)
     104: "19/07/2026"
 };
 
 // ==================== FASE DE GRUPOS ====================
-
-// JORNADA 1 (ID 1-24)
 agregarPartido(1, "México", "Sudáfrica", "Grupo A", "A");
 agregarPartido(2, "República de Corea", "República Checa", "Grupo A", "A");
 agregarPartido(3, "Canadá", "Bosnia y Herzegovina", "Grupo B", "B");
@@ -192,8 +249,6 @@ agregarPartido(21, "Portugal", "RD Congo", "Grupo K", "K");
 agregarPartido(22, "Inglaterra", "Croacia", "Grupo L", "L");
 agregarPartido(23, "Ghana", "Panamá", "Grupo L", "L");
 agregarPartido(24, "Uzbekistán", "Colombia", "Grupo K", "K");
-
-// JORNADA 2 (ID 25-48)
 agregarPartido(25, "República Checa", "Sudáfrica", "Grupo A", "A");
 agregarPartido(26, "Suiza", "Bosnia y Herzegovina", "Grupo B", "B");
 agregarPartido(27, "Canadá", "Catar", "Grupo B", "B");
@@ -218,8 +273,6 @@ agregarPartido(45, "Portugal", "Uzbekistán", "Grupo K", "K");
 agregarPartido(46, "Inglaterra", "Ghana", "Grupo L", "L");
 agregarPartido(47, "Panamá", "Croacia", "Grupo L", "L");
 agregarPartido(48, "Colombia", "RD Congo", "Grupo K", "K");
-
-// JORNADA 3 (ID 49-72)
 agregarPartido(49, "Suiza", "Canadá", "Grupo B", "B");
 agregarPartido(50, "Bosnia y Herzegovina", "Catar", "Grupo B", "B");
 agregarPartido(51, "Escocia", "Brasil", "Grupo C", "C");
@@ -244,8 +297,6 @@ agregarPartido(69, "Colombia", "Portugal", "Grupo K", "K");
 agregarPartido(70, "RD Congo", "Uzbekistán", "Grupo K", "K");
 agregarPartido(71, "Argelia", "Austria", "Grupo J", "J");
 agregarPartido(72, "Jordania", "Argentina", "Grupo J", "J");
-
-// ==================== ELIMINATORIAS ====================
 agregarPartido(73, "2° Grupo A", "2° Grupo B", "Dieciseisavos");
 agregarPartido(74, "1° Grupo E", "3° Grupo A/B/C/D/F", "Dieciseisavos");
 agregarPartido(75, "1° Grupo F", "2° Grupo C", "Dieciseisavos");
@@ -324,7 +375,7 @@ function guardarSesion(usuario) {
 }
 
 // ==================== REGISTRO ====================
-function hacerRegistro() {
+async function hacerRegistro() {
     const nombre = document.getElementById("regNombre").value.trim();
     const usuario = document.getElementById("regUser").value.trim().toLowerCase();
     const pin = document.getElementById("regPin").value;
@@ -361,6 +412,7 @@ function hacerRegistro() {
     
     usuarios.push(nuevoUsuario);
     guardarUsuarios();
+    await guardarUsuarioFirebase(nuevoUsuario);
     
     localStorage.setItem("recordar_usuario", usuario);
     localStorage.setItem("recordar_pin", pin);
@@ -376,7 +428,7 @@ function hacerRegistro() {
 }
 
 // ==================== LOGIN ====================
-function hacerLogin() {
+async function hacerLogin() {
     const usuario = document.getElementById("loginUser").value.trim().toLowerCase();
     const pin = document.getElementById("loginPin").value;
     const msgDiv = document.getElementById("loginMsg");
@@ -392,13 +444,15 @@ function hacerLogin() {
         return;
     }
     
-    const usuarioEncontrado = usuarios.find(u => u.usuario === usuario);
-    if (!usuarioEncontrado) {
+    const snapshot = await database.ref(`usuarios/${usuario}`).once('value');
+    const usuarioData = snapshot.val();
+    
+    if (!usuarioData) {
         msgDiv.innerHTML = "❌ Usuario no registrado";
         msgDiv.style.color = "red";
         return;
     }
-    if (usuarioEncontrado.pin !== pin) {
+    if (usuarioData.pin !== pin) {
         msgDiv.innerHTML = "❌ PIN incorrecto";
         msgDiv.style.color = "red";
         return;
@@ -407,9 +461,13 @@ function hacerLogin() {
     msgDiv.innerHTML = "✅ ¡Bienvenido!";
     msgDiv.style.color = "green";
     
+    usuarioActual = usuarioData;
+    localStorage.setItem("quiniela_sesion", usuario);
+    
+    const predicciones = await cargarPrediccionesFirebase(usuario);
+    usuarioActual.predicciones = predicciones;
+    
     setTimeout(() => {
-        usuarioActual = usuarioEncontrado;
-        guardarSesion(usuarioEncontrado);
         mostrarPantallaPrincipal();
     }, 500);
 }
@@ -444,7 +502,7 @@ function mostrarPantallaLogin() {
     document.getElementById("loginMsg").innerHTML = "";
 }
 
-function mostrarPantallaPrincipal() {
+async function mostrarPantallaPrincipal() {
     document.getElementById("authScreen").classList.add("hidden");
     document.getElementById("mainScreen").classList.remove("hidden");
     
@@ -454,7 +512,7 @@ function mostrarPantallaPrincipal() {
     renderPartidos();
     renderHorarios();
     renderMisPredicciones();
-    renderClasificacion();
+    await renderClasificacion();
     
     const etapaBtns = document.querySelectorAll(".etapa-btn");
     etapaBtns.forEach(btn => {
@@ -512,7 +570,7 @@ function recalcularPuntos() {
 }
 
 // ==================== GUARDAR PREDICCIÓN ====================
-function guardarPrediccion(partidoId, resultado) {
+async function guardarPrediccion(partidoId, resultado) {
     if (!usuarioActual) return;
     
     const partido = partidos.find(p => p.id === partidoId);
@@ -564,11 +622,166 @@ function guardarPrediccion(partidoId, resultado) {
     usuarioActual.predicciones[partidoId] = resultado;
     recalcularPuntos();
     guardarUsuarios();
+    await guardarPrediccionFirebase(usuarioActual.usuario, partidoId, resultado);
     
     renderPartidos();
     renderMisPredicciones();
     renderClasificacion();
     document.getElementById("userNameDisplay").innerHTML = `👤 ${usuarioActual.nombre} (@${usuarioActual.usuario}) | 🎯 Puntos: ${usuarioActual.puntosTotal || 0}`;
+}
+
+// ==================== ADMIN (CONSOLA) ====================
+async function adminCargarResultado(id, resultado) {
+    if (!adminAutenticado) {
+        const email = prompt("🔐 Correo de administrador:");
+        const password = prompt("🔐 Contraseña:");
+        const ok = await autenticarAdmin(email, password);
+        if (!ok) {
+            alert("❌ Autenticación fallida. No puedes cambiar resultados.");
+            return;
+        }
+    }
+    await database.ref(`resultados/${id}`).set(resultado);
+    console.log(`✅ Resultado ${id} -> ${resultado} guardado en Firebase`);
+    await cargarResultadosFirebase();
+    if (usuarioActual) {
+        renderPartidos();
+        renderMisPredicciones();
+        renderClasificacion();
+    }
+}
+
+async function adminReiniciarResultados() {
+    if (!adminAutenticado) {
+        const email = prompt("🔐 Correo de administrador:");
+        const password = prompt("🔐 Contraseña:");
+        const ok = await autenticarAdmin(email, password);
+        if (!ok) {
+            alert("❌ Autenticación fallida. No puedes reiniciar resultados.");
+            return;
+        }
+    }
+    await database.ref('resultados').set({});
+    console.log("🔄 Resultados reiniciados en Firebase");
+    await cargarResultadosFirebase();
+    if (usuarioActual) {
+        renderPartidos();
+        renderMisPredicciones();
+        renderClasificacion();
+    }
+}
+
+function adminVerUsuarios() {
+    console.table(usuarios.map(u => ({ Nombre: u.nombre, Usuario: u.usuario, PIN: u.pin, Puntos: u.puntosTotal })));
+}
+
+// ==================== CONTROL DE JORNADAS (ADMIN) ====================
+async function cambiarJornada(jornada) {
+    if (!adminAutenticado) {
+        const email = prompt("🔐 Correo de administrador:");
+        const password = prompt("🔐 Contraseña:");
+        const ok = await autenticarAdmin(email, password);
+        if (!ok) {
+            alert("❌ Autenticación fallida. No puedes cambiar la jornada.");
+            return;
+        }
+    }
+    await database.ref('jornadaActiva').set(jornada);
+    console.log(`📅 Jornada ${jornada} activada en Firebase`);
+    await cargarJornadaFirebase();
+    if (usuarioActual) renderPartidos();
+}
+
+// ==================== CONTROL DE FASES DE ELIMINATORIAS (ADMIN) ====================
+async function cambiarFase(fase) {
+    const fasesValidas = ["grupos", "dieciseisavos", "octavos", "cuartos", "semifinales", "tercerpuesto", "final"];
+    
+    if (!fasesValidas.includes(fase)) {
+        console.log("❌ Fase inválida. Usa: grupos, dieciseisavos, octavos, cuartos, semifinales, tercerpuesto, final");
+        return;
+    }
+    
+    if (!adminAutenticado) {
+        const email = prompt("🔐 Correo de administrador:");
+        const password = prompt("🔐 Contraseña:");
+        const ok = await autenticarAdmin(email, password);
+        if (!ok) {
+            alert("❌ Autenticación fallida. No puedes cambiar la fase.");
+            return;
+        }
+    }
+    await database.ref('faseActiva').set(fase);
+    console.log(`🏆 Fase ${fase} activada en Firebase`);
+    await cargarFaseFirebase();
+    if (usuarioActual) renderPartidos();
+}
+
+// ==================== CONTROL DE HORARIOS (ADMIN) ====================
+function mostrarFaseEnHorarios(fase) {
+    const fasesValidas = ["grupos", "dieciseisavos", "octavos", "cuartos", "semifinales", "tercerpuesto", "final"];
+    
+    if (!fasesValidas.includes(fase)) {
+        console.log("❌ Fase inválida. Usa: grupos, dieciseisavos, octavos, cuartos, semifinales, tercerpuesto, final");
+        return;
+    }
+    
+    if (!fasesHorariosVisibles.includes(fase)) {
+        fasesHorariosVisibles.push(fase);
+        console.log(`📅 Fase "${fase}" agregada a horarios.`);
+    } else {
+        console.log(`⚠️ La fase "${fase}" ya está visible en horarios.`);
+    }
+    renderHorarios();
+}
+
+function ocultarFaseEnHorarios(fase) {
+    const index = fasesHorariosVisibles.indexOf(fase);
+    if (index !== -1) {
+        fasesHorariosVisibles.splice(index, 1);
+        console.log(`📅 Fase "${fase}" ocultada de horarios.`);
+    } else {
+        console.log(`⚠️ La fase "${fase}" no está visible en horarios.`);
+    }
+    renderHorarios();
+}
+
+function actualizarEquipoEnHorarios(idPartido, nuevoEquipoA, nuevoEquipoB) {
+    const partido = partidos.find(p => p.id === idPartido);
+    if (!partido) {
+        console.log("❌ Partido no existe");
+        return;
+    }
+    partido.equipoA = nuevoEquipoA;
+    partido.equipoB = nuevoEquipoB;
+    guardarPartidos();
+    renderHorarios();
+    renderPartidos();
+    console.log(`✅ Partido ${idPartido} actualizado: ${nuevoEquipoA} vs ${nuevoEquipoB}`);
+}
+
+// ==================== BLOQUEAR/DESBLOQUEAR PARTIDO INDIVIDUAL ====================
+function bloquearPartido(id) {
+    const partido = partidos.find(p => p.id === id);
+    if (!partido) {
+        console.log("❌ Partido no existe");
+        return;
+    }
+    partido.resultadoReal = "bloqueado";
+    guardarPartidos();
+    renderPartidos();
+    console.log(`🔒 Partido ${id}: ${partido.equipoA} vs ${partido.equipoB} ha sido bloqueado.`);
+}
+
+function desbloquearPartido(id) {
+    const partido = partidos.find(p => p.id === id);
+    if (!partido) {
+        console.log("❌ Partido no existe");
+        return;
+    }
+    partido.resultadoReal = null;
+    guardarPartidos();
+    renderPartidos();
+    console.log(`🔓 Partido ${id}: ${partido.equipoA} vs ${partido.equipoB} ha sido desbloqueado.`);
 }
 
 // ==================== RENDER PARTIDOS ====================
@@ -607,13 +820,10 @@ function renderPartidos() {
     for (let partido of partidosFiltrados) {
         const prediccionActual = usuarioActual?.predicciones?.[partido.id];
         
-        // Determinar el mensaje según el estado del partido
         let mensajeEstado = "";
         let claseMensaje = "";
         
-        // Caso 1: El partido tiene resultado real (ya sea '1', '2', 'X' o 'bloqueado')
         if (partido.resultadoReal !== null && partido.resultadoReal !== "bloqueado") {
-            // Hay un resultado real cargado
             if (prediccionActual === partido.resultadoReal) {
                 mensajeEstado = `✅ +${PUNTOS_POR_ACIERTO} puntos`;
                 claseMensaje = "acierto";
@@ -624,9 +834,7 @@ function renderPartidos() {
                 mensajeEstado = "❌ No apostaste";
                 claseMensaje = "error";
             }
-        } 
-        // Caso 2: El partido está bloqueado (resultadoReal === "bloqueado")
-        else if (partido.resultadoReal === "bloqueado") {
+        } else if (partido.resultadoReal === "bloqueado") {
             if (prediccionActual) {
                 mensajeEstado = "🔒 No puedes cambiar la apuesta";
                 claseMensaje = "bloqueado";
@@ -634,14 +842,11 @@ function renderPartidos() {
                 mensajeEstado = "🔒 Apuestas cerradas";
                 claseMensaje = "bloqueado";
             }
-        }
-        // Caso 3: Partido pendiente (sin resultado)
-        else {
+        } else {
             mensajeEstado = "⏳ Partido pendiente";
             claseMensaje = "pendiente";
         }
         
-        // Resultado real (si existe y no es bloqueado)
         let resultadoTexto = "";
         if (partido.resultadoReal !== null && partido.resultadoReal !== "bloqueado") {
             resultadoTexto = `🏁 Resultado: ${partido.resultadoReal === '1' ? partido.equipoA : partido.resultadoReal === '2' ? partido.equipoB : "Empate"}`;
@@ -651,7 +856,6 @@ function renderPartidos() {
             resultadoTexto = "⏳ Partido pendiente";
         }
         
-        // Bloqueo por jornada
         let bloqueadoPorJornada = false;
         if (partido.id >= 1 && partido.id <= 72) {
             let jornadaDelPartido = 1;
@@ -663,7 +867,6 @@ function renderPartidos() {
             bloqueadoPorJornada = jornadaDelPartido > jornadaActiva;
         }
         
-        // Bloqueo por fase (eliminatorias)
         let bloqueadoPorFase = false;
         if (partido.id >= 73) {
             let faseDelPartido = "grupos";
@@ -681,7 +884,6 @@ function renderPartidos() {
             bloqueadoPorFase = fasePartidoIndex > faseActualIndex;
         }
         
-        // El partido está deshabilitado si: tiene resultado, está bloqueado por admin, por jornada o por fase
         const deshabilitado = (partido.resultadoReal !== null) || bloqueadoPorJornada || bloqueadoPorFase;
         
         html += `
@@ -732,12 +934,9 @@ function renderHorarios() {
 
     let partidosAMostrar = [];
     
-    // Agregar fase de grupos siempre está visible
     if (fasesHorariosVisibles.includes("grupos")) {
         partidosAMostrar.push(...partidos.filter(p => p.id >= 1 && p.id <= 72));
     }
-    
-    // Agregar eliminatorias según fases activadas
     if (fasesHorariosVisibles.includes("dieciseisavos")) {
         partidosAMostrar.push(...partidos.filter(p => p.id >= 73 && p.id <= 88));
     }
@@ -762,7 +961,6 @@ function renderHorarios() {
         return;
     }
 
-    // Agrupar por fecha
     const partidosPorFecha = {};
     
     partidosAMostrar.forEach(partido => {
@@ -780,7 +978,6 @@ function renderHorarios() {
         partidosPorFecha[fecha].push(partido);
     });
 
-    // Ordenar fechas
     const fechasOrdenadas = Object.keys(partidosPorFecha).sort((a,b) => {
         const [da, ma, aa] = a.split('/');
         const [db, mb, ab] = b.split('/');
@@ -810,7 +1007,6 @@ function renderHorarios() {
                 estadio = estadiosEliminatorias[partido.id] || "Estadio por confirmar";
             }
             
-            // Determinar si el partido necesita actualización (tiene placeholders)
             const necesitaActualizacion = partido.equipoA.includes("°") || partido.equipoA.includes("Ganador") || partido.equipoA.includes("Perdedor");
             
             html += `
@@ -834,6 +1030,7 @@ function renderHorarios() {
     html += '</div>';
     container.innerHTML = html;
 }
+
 // ==================== RENDER MIS PREDICCIONES ====================
 function renderMisPredicciones() {
     const container = document.getElementById("misPrediccionesList");
@@ -851,60 +1048,38 @@ function renderMisPredicciones() {
         
         const predTexto = pred === '1' ? partido.equipoA : pred === '2' ? partido.equipoB : "Empate";
         
-        let estadoTexto = "";
-        let estadoColor = "";
-        let puntosTexto = "";
-        
-        // Caso 1: Ya hay resultado real (no es bloqueado)
         if (partido.resultadoReal !== null && partido.resultadoReal !== "bloqueado") {
             const realTexto = partido.resultadoReal === '1' ? partido.equipoA : 
                              partido.resultadoReal === '2' ? partido.equipoB : "Empate";
             
             if (pred === partido.resultadoReal) {
-                // ACIERTO
-                estadoTexto = "✅ ¡ACERTASTE!";
-                estadoColor = "#c8e6c9";
-                puntosTexto = `<div class="puntos-acierto">🏆 +${PUNTOS_POR_ACIERTO} puntos</div>`;
+                html += `
+                    <div class="match-card" style="border-left: 5px solid #00A8A8">
+                        <div class="match-teams">${partido.equipoA} vs ${partido.equipoB}</div>
+                        <div>📌 Tu pronóstico: <strong>${predTexto}</strong></div>
+                        <div>🏁 Resultado final: <strong>${realTexto}</strong></div>
+                        <div class="puntos-acierto">🏆 +${PUNTOS_POR_ACIERTO} puntos</div>
+                        <div style="margin-top:8px; font-weight:bold; color:#00A8A8">✅ ¡ACERTASTE!</div>
+                    </div>
+                `;
             } else {
-                // ERROR
-                estadoTexto = `❌ Fallaste. El resultado fue: ${realTexto}`;
-                estadoColor = "#ffcdd2";
-                puntosTexto = `<div class="puntos-error">0 puntos</div>`;
+                html += `
+                    <div class="match-card" style="border-left: 5px solid #c62828">
+                        <div class="match-teams">${partido.equipoA} vs ${partido.equipoB}</div>
+                        <div>📌 Tu pronóstico: <strong>${predTexto}</strong></div>
+                        <div>🏁 Resultado final: <strong>${realTexto}</strong></div>
+                        <div class="puntos-error">0 puntos</div>
+                        <div style="margin-top:8px; font-weight:bold; color:#c62828">❌ Fallaste</div>
+                    </div>
+                `;
             }
-            
-            html += `
-                <div class="match-card" style="border-left: 5px solid ${pred === partido.resultadoReal ? '#4caf50' : '#f44336'}">
-                    <div class="match-teams">${partido.equipoA} vs ${partido.equipoB}</div>
-                    <div>📌 Tu pronóstico: <strong>${predTexto}</strong></div>
-                    <div>🏁 Resultado final: <strong>${realTexto}</strong></div>
-                    ${puntosTexto}
-                    <div style="margin-top:8px; font-weight:bold; color:${pred === partido.resultadoReal ? '#2e7d32' : '#c62828'}">${estadoTexto}</div>
-                </div>
-            `;
-        }
-        // Caso 2: Partido bloqueado sin resultado
-        else if (partido.resultadoReal === "bloqueado") {
-            estadoTexto = "⏳ En espera de resultado";
-            estadoColor = "#fff3e0";
-            html += `
-                <div class="match-card" style="border-left: 5px solid #ff9800">
-                    <div class="match-teams">${partido.equipoA} vs ${partido.equipoB}</div>
-                    <div>📌 Tu pronóstico: <strong>${predTexto}</strong></div>
-                    <div>🏁 Estado: <strong>Partido bloqueado</strong></div>
-                    <div class="puntos-espera">⏳ ${estadoTexto}</div>
-                </div>
-            `;
-        }
-        // Caso 3: Partido pendiente (sin resultado)
-        else {
-            estadoTexto = "⏳ En espera de resultado";
-            estadoColor = "#e8eaf6";
+        } else {
             html += `
                 <div class="match-card" style="border-left: 5px solid #2196f3">
                     <div class="match-teams">${partido.equipoA} vs ${partido.equipoB}</div>
                     <div>📌 Tu pronóstico: <strong>${predTexto}</strong></div>
                     <div>🏁 Estado: <strong>Partido pendiente</strong></div>
-                    <div class="puntos-espera">⏳ ${estadoTexto}</div>
+                    <div class="puntos-espera">⏳ En espera de resultado</div>
                 </div>
             `;
         }
@@ -913,11 +1088,15 @@ function renderMisPredicciones() {
 }
 
 // ==================== RENDER CLASIFICACIÓN ====================
-function renderClasificacion() {
+async function renderClasificacion() {
     const container = document.getElementById("clasificacionList");
     if (!container) return;
     
-    if (usuarios.length === 0) {
+    const snapshot = await database.ref('usuarios').once('value');
+    const usuariosData = snapshot.val() || {};
+    const usuariosLista = Object.values(usuariosData).sort((a, b) => (b.puntosTotal || 0) - (a.puntosTotal || 0));
+    
+    if (usuariosLista.length === 0) {
         container.innerHTML = "<div class='no-data'>👥 No hay usuarios registrados aún. ¡Sé el primero!</div>";
         return;
     }
@@ -935,7 +1114,7 @@ function renderClasificacion() {
                 <tbody>
     `;
     
-    usuarios.forEach((user, i) => {
+    usuariosLista.forEach((user, i) => {
         let medalla = "";
         let claseMedalla = "";
         
@@ -959,7 +1138,7 @@ function renderClasificacion() {
                     ${i < 3 ? `<div class="${claseMedalla}">${medalla}</div>` : `<strong>${medalla}</strong>`}
                 </td>
                 <td class="nombre-col">
-                    ${user.nombre}
+                    ${user.nombre} (@${user.usuario})
                     ${i === 0 ? '<span class="lider-badge">🔥 LÍDER</span>' : ''}
                 </td>
                 <td class="puntos-col">
@@ -1021,117 +1200,10 @@ function cambiarEtapa(etapa) {
     renderPartidos();
 }
 
-// ==================== CONTROL DE JORNADAS (ADMIN) ====================
-function cambiarJornada(jornada) {
-    if (jornada < 1 || jornada > 3) {
-        console.log("❌ Jornada inválida. Usa 1, 2 o 3");
-        return;
-    }
-    jornadaActiva = jornada;
-    renderPartidos();
-    console.log(`📅 Jornada ${jornada} activada. Ahora se pueden apostar los partidos de la Jornada ${jornada}.`);
-}
-
-// ==================== CONTROL DE FASES DE ELIMINATORIAS (ADMIN) ====================
-function cambiarFase(fase) {
-    const fasesValidas = ["grupos", "dieciseisavos", "octavos", "cuartos", "semifinales", "tercerpuesto", "final"];
-    
-    if (!fasesValidas.includes(fase)) {
-        console.log("❌ Fase inválida. Usa: grupos, dieciseisavos, octavos, cuartos, semifinales, tercerpuesto, final");
-        return;
-    }
-    
-    faseActiva = fase;
-    renderPartidos();
-    console.log(`🏆 Fase ${fase.toUpperCase()} activada. Ahora se pueden apostar los partidos de esta fase.`);
-}
-
-// ==================== ADMIN (CONSOLA) ====================
-function adminCargarResultado(id, resultado) {
-    // ... código existente ...
-}
-
-function adminReiniciarResultados() {
-    // ... código existente ...
-}
-
-function adminVerUsuarios() {
-    // ... código existente ...
-}
-
-// ==================== CONTROL DE HORARIOS (ADMIN) ====================
-function mostrarFaseEnHorarios(fase) {
-    const fasesValidas = ["grupos", "dieciseisavos", "octavos", "cuartos", "semifinales", "tercerpuesto", "final"];
-    
-    if (!fasesValidas.includes(fase)) {
-        console.log("❌ Fase inválida. Usa: grupos, dieciseisavos, octavos, cuartos, semifinales, tercerpuesto, final");
-        return;
-    }
-    
-    if (!fasesHorariosVisibles.includes(fase)) {
-        fasesHorariosVisibles.push(fase);
-        console.log(`📅 Fase "${fase}" agregada a horarios.`);
-    } else {
-        console.log(`⚠️ La fase "${fase}" ya está visible en horarios.`);
-    }
-    renderHorarios();
-}
-
-function ocultarFaseEnHorarios(fase) {
-    const index = fasesHorariosVisibles.indexOf(fase);
-    if (index !== -1) {
-        fasesHorariosVisibles.splice(index, 1);
-        console.log(`📅 Fase "${fase}" ocultada de horarios.`);
-    } else {
-        console.log(`⚠️ La fase "${fase}" no está visible en horarios.`);
-    }
-    renderHorarios();
-}
-
-function actualizarEquipoEnHorarios(idPartido, nuevoEquipoA, nuevoEquipoB) {
-    const partido = partidos.find(p => p.id === idPartido);
-    if (!partido) {
-        console.log("❌ Partido no existe");
-        return;
-    }
-    partido.equipoA = nuevoEquipoA;
-    partido.equipoB = nuevoEquipoB;
-    guardarPartidos();
-    renderHorarios();
-    renderPartidos(); // También actualiza la pestaña de partidos
-    console.log(`✅ Partido ${idPartido} actualizado: ${nuevoEquipoA} vs ${nuevoEquipoB}`);
-}
-
 // Exponer funciones globalmente
 window.mostrarFaseEnHorarios = mostrarFaseEnHorarios;
 window.ocultarFaseEnHorarios = ocultarFaseEnHorarios;
 window.actualizarEquipoEnHorarios = actualizarEquipoEnHorarios;
-
-// ==================== BLOQUEAR/DESBLOQUEAR PARTIDO INDIVIDUAL ====================
-function bloquearPartido(id) {
-    const partido = partidos.find(p => p.id === id);
-    if (!partido) {
-        console.log("❌ Partido no existe");
-        return;
-    }
-    partido.resultadoReal = "bloqueado";
-    guardarPartidos();
-    renderPartidos();
-    console.log(`🔒 Partido ${id}: ${partido.equipoA} vs ${partido.equipoB} ha sido bloqueado.`);
-}
-
-function desbloquearPartido(id) {
-    const partido = partidos.find(p => p.id === id);
-    if (!partido) {
-        console.log("❌ Partido no existe");
-        return;
-    }
-    partido.resultadoReal = null;
-    guardarPartidos();
-    renderPartidos();
-    console.log(`🔓 Partido ${id}: ${partido.equipoA} vs ${partido.equipoB} ha sido desbloqueado.`);
-}
-
 window.adminCargarResultado = adminCargarResultado;
 window.adminReiniciarResultados = adminReiniciarResultados;
 window.adminVerUsuarios = adminVerUsuarios;
@@ -1141,33 +1213,51 @@ window.bloquearPartido = bloquearPartido;
 window.desbloquearPartido = desbloquearPartido;
 
 // ==================== INICIAR ====================
-cargarDatos();
-
-if (usuarioActual) {
-    mostrarPantallaPrincipal();
-} else {
-    mostrarPantallaLogin();
-}
-
-const toggleLoginBtn = document.getElementById("toggleLoginPin");
-const loginPinInput = document.getElementById("loginPin");
-
-if (toggleLoginBtn && loginPinInput) {
-    toggleLoginBtn.addEventListener("click", function() {
-        if (loginPinInput.type === "password") {
-            loginPinInput.type = "text";
-            toggleLoginBtn.textContent = "🙈";
+async function init() {
+    await cargarResultadosFirebase();
+    await cargarJornadaFirebase();
+    await cargarFaseFirebase();
+    
+    const sesionGuardada = localStorage.getItem("quiniela_sesion");
+    if (sesionGuardada) {
+        const snapshot = await database.ref(`usuarios/${sesionGuardada}`).once('value');
+        const usuarioData = snapshot.val();
+        if (usuarioData) {
+            usuarioActual = usuarioData;
+            const predicciones = await cargarPrediccionesFirebase(sesionGuardada);
+            usuarioActual.predicciones = predicciones;
+            mostrarPantallaPrincipal();
         } else {
-            loginPinInput.type = "password";
-            toggleLoginBtn.textContent = "👁️";
+            mostrarPantallaLogin();
         }
-    });
+    } else {
+        mostrarPantallaLogin();
+    }
+    
+    const toggleLoginBtn = document.getElementById("toggleLoginPin");
+    const loginPinInput = document.getElementById("loginPin");
+    if (toggleLoginBtn && loginPinInput) {
+        toggleLoginBtn.addEventListener("click", function() {
+            if (loginPinInput.type === "password") {
+                loginPinInput.type = "text";
+                toggleLoginBtn.textContent = "🙈";
+            } else {
+                loginPinInput.type = "password";
+                toggleLoginBtn.textContent = "👁️";
+            }
+        });
+    }
+    
+    console.log("🏆 Quiniela Mundial 2026 - Con Firebase");
+    console.log("💡 Comandos admin (solo para ti):");
+    console.log("   adminCargarResultado(id, '1/2/X') - Cargar resultado (todos lo ven)");
+    console.log("   adminReiniciarResultados() - Reiniciar resultados");
+    console.log("   adminVerUsuarios() - Ver usuarios");
+    console.log("   cambiarJornada(1/2/3) - Cambiar jornada activa");
+    console.log("   cambiarFase('fase') - Cambiar fase activa");
+    console.log("   bloquearPartido(id) - Bloquear partido individual");
+    console.log("   desbloquearPartido(id) - Desbloquear partido individual");
+    console.log("   mostrarFaseEnHorarios('fase') - Mostrar fase en horarios");
 }
 
-console.log("🏆 Quiniela Mundial 2026 - Versión Completa");
-console.log("💡 Comandos admin:");
-console.log("   adminVerUsuarios() - Ver usuarios");
-console.log("   adminCargarResultado(id, '1/2/X') - Cargar resultado");
-console.log("   adminReiniciarResultados() - Reiniciar resultados");
-console.log("   cambiarJornada(1/2/3) - Cambiar jornada activa (fase de grupos)");
-console.log("   cambiarFase('dieciseisavos/octavos/cuartos/semifinales/tercerpuesto/final') - Cambiar fase eliminatoria");
+init();
